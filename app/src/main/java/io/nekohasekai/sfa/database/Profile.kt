@@ -43,6 +43,12 @@ class Profile(
         @Query("SELECT * FROM profiles WHERE id = :profileId")
         fun get(profileId: Long): Profile?
 
+        @Query("SELECT * FROM profiles WHERE name = :profileName")
+        fun get(profileName: String): Profile?
+
+        @Query("SELECT id FROM profiles WHERE name = :profileName")
+        fun getId(profileName: String): Long
+
         @Query("select * from profiles order by userOrder asc")
         fun list(): List<Profile>
 

@@ -9,4 +9,5 @@
 .cxx
 local.properties
 /app/libs/
+/app/other/
 /service-account-credentials.json

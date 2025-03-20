@@ -77,9 +77,6 @@ class ConfigurationFragment : Fragment() {
             }).attachToRecyclerView(it)
         }
         adapter.reload()
-        binding.fab.setOnClickListener {
-            AddProfileDialog().show(childFragmentManager, "add_profile")
-        }
         ProfileManager.registerCallback(this::updateProfiles)
         return binding.root
     }
@@ -228,37 +225,8 @@ class ConfigurationFragment : Fragment() {
                 val popup = PopupMenu(button.context, button)
                 popup.setForceShowIcon(true)
                 popup.menuInflater.inflate(R.menu.profile_menu, popup.menu)
-                if (profile.typed.type != TypedProfile.Type.Remote) {
-                    popup.menu.removeItem(R.id.action_share_url)
-                }
                 popup.setOnMenuItemClickListener {
                     when (it.itemId) {
-                        R.id.action_share -> {
-                            adapter.scope.launch(Dispatchers.IO) {
-                                try {
-                                    button.context.shareProfile(profile)
-                                } catch (e: Exception) {
-                                    withContext(Dispatchers.Main) {
-                                        button.context.errorDialogBuilder(e).show()
-                                    }
-                                }
-                            }
-                            true
-                        }
-
-                        R.id.action_share_url -> {
-                            adapter.scope.launch(Dispatchers.IO) {
-                                try {
-                                    adapter.fragmentActivity.shareProfileURL(profile)
-                                } catch (e: Exception) {
-                                    withContext(Dispatchers.Main) {
-                                        button.context.errorDialogBuilder(e).show()
-                                    }
-                                }
-                            }
-                            true
-                        }
-
                         R.id.action_delete -> {
                             adapter.items.remove(profile)
                             adapter.notifyItemRemoved(adapterPosition)

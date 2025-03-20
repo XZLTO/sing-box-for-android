@@ -49,7 +49,15 @@ object ProfileManager {
     }
 
     suspend fun create(profile: Profile): Profile {
-        profile.id = instance.profileDao().insert(profile)
+
+        if(instance.profileDao().get(profile.name) == null)
+            profile.id = instance.profileDao().insert(profile)
+        else
+        {
+            profile.id = instance.profileDao().getId(profile.name)
+            instance.profileDao().update(profile)
+        };
+
         for (callback in callbacks.toList()) {
             callback()
         }

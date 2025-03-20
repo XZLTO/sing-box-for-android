@@ -58,8 +58,8 @@ class NewProfileActivity : AbstractActivity<ActivityAddProfileBinding>() {
                 binding.type.text = TypedProfile.Type.Remote.getString(this)
                 binding.remoteURL.editText?.setText(importURL)
                 binding.localFields.isVisible = false
+                binding.remoteURL.isVisible = false
                 binding.remoteFields.isVisible = true
-                binding.autoUpdateInterval.text = "60"
             }
         }
 
@@ -74,9 +74,6 @@ class NewProfileActivity : AbstractActivity<ActivityAddProfileBinding>() {
                 TypedProfile.Type.Remote.getString(this) -> {
                     binding.localFields.isVisible = false
                     binding.remoteFields.isVisible = true
-                    if (binding.autoUpdateInterval.text.toIntOrNull() == null) {
-                        binding.autoUpdateInterval.text = "60"
-                    }
                 }
             }
         }
@@ -97,7 +94,6 @@ class NewProfileActivity : AbstractActivity<ActivityAddProfileBinding>() {
             startFilesForResult(importFile, "application/json")
         }
         binding.createProfile.setOnClickListener(this::createProfile)
-        binding.autoUpdateInterval.addTextChangedListener(this::updateAutoUpdateInterval)
     }
 
     private fun createProfile(@Suppress("UNUSED_PARAMETER") view: View) {
@@ -179,11 +175,8 @@ class NewProfileActivity : AbstractActivity<ActivityAddProfileBinding>() {
                 configFile.writeText(content)
                 typedProfile.remoteURL = remoteURL
                 typedProfile.lastUpdated = Date()
-                typedProfile.autoUpdate =
-                    EnabledType.valueOf(this, binding.autoUpdate.text).boolValue
-                binding.autoUpdateInterval.text.toIntOrNull()?.also {
-                    typedProfile.autoUpdateInterval = it
-                }
+                typedProfile.autoUpdate = false
+                typedProfile.autoUpdateInterval = 0
             }
         }
         ProfileManager.create(profile)
@@ -192,25 +185,5 @@ class NewProfileActivity : AbstractActivity<ActivityAddProfileBinding>() {
             finish()
         }
     }
-
-    private fun updateAutoUpdateInterval(newValue: String) {
-        if (newValue.isBlank()) {
-            binding.autoUpdateInterval.error = getString(R.string.profile_input_required)
-            return
-        }
-        val intValue = try {
-            newValue.toInt()
-        } catch (e: Exception) {
-            binding.autoUpdateInterval.error = e.localizedMessage
-            return
-        }
-        if (intValue < 15) {
-            binding.autoUpdateInterval.error =
-                getString(R.string.profile_auto_update_interval_minimum_hint)
-            return
-        }
-        binding.autoUpdateInterval.error = null
-    }
-
 
 }

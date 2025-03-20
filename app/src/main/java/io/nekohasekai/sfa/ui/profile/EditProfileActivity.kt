@@ -87,10 +87,6 @@ class EditProfileActivity : AbstractActivity<ActivityEditProfileBinding>() {
                     binding.editButton.isVisible = false
                     binding.remoteFields.isVisible = true
                     binding.remoteURL.text = profile.typed.remoteURL
-                    binding.lastUpdated.text =
-                        DateFormat.getDateTimeInstance().format(profile.typed.lastUpdated)
-                    binding.autoUpdate.text = EnabledType.from(profile.typed.autoUpdate)
-                        .getString(this@EditProfileActivity)
                     binding.autoUpdate.setSimpleItems(R.array.enabled)
                     binding.autoUpdateInterval.isVisible = profile.typed.autoUpdate
                     binding.autoUpdateInterval.text = profile.typed.autoUpdateInterval.toString()

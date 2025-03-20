@@ -9,6 +9,7 @@ import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
 import android.text.Html
+import android.util.Log
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -42,8 +43,11 @@ import io.nekohasekai.sfa.databinding.ActivityMainBinding
 import io.nekohasekai.sfa.ktx.errorDialogBuilder
 import io.nekohasekai.sfa.ktx.hasPermission
 import io.nekohasekai.sfa.ktx.launchCustomTab
+import io.nekohasekai.sfa.ui.dashboard.OverviewFragment
+import io.nekohasekai.sfa.ui.main.DashboardFragment
 import io.nekohasekai.sfa.ui.profile.NewProfileActivity
 import io.nekohasekai.sfa.ui.shared.AbstractActivity
+import io.nekohasekai.sfa.utils.HTTPClient
 import io.nekohasekai.sfa.utils.MIUIUtils
 import io.nekohasekai.sfa.vendor.Vendor
 import kotlinx.coroutines.Dispatchers
@@ -90,6 +94,7 @@ class MainActivity : AbstractActivity<ActivityMainBinding>(),
         startIntegration()
 
         onNewIntent(intent)
+
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -109,36 +114,29 @@ class MainActivity : AbstractActivity<ActivityMainBinding>(),
     override public fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         val uri = intent.data ?: return
+
         when (intent.action) {
             Action.OPEN_URL -> {
                 launchCustomTab(uri.toString())
                 return
             }
         }
-        if (uri.scheme == "sing-box" && uri.host == "import-remote-profile") {
-            val profile = try {
-                Libbox.parseRemoteProfileImportLink(uri.toString())
-            } catch (e: Exception) {
-                errorDialogBuilder(e).show()
-                return
-            }
-            MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.import_remote_profile)
-                .setMessage(
-                    getString(
-                        R.string.import_remote_profile_message,
-                        profile.name,
-                        profile.host
-                    )
-                )
-                .setPositiveButton(R.string.ok) { _, _ ->
-                    startActivity(Intent(this, NewProfileActivity::class.java).apply {
-                        putExtra("importName", profile.name)
-                        putExtra("importURL", profile.url)
-                    })
+
+        if ((uri.scheme == "sing-box" && uri.host == "import-remote-profile") || ((uri.scheme == "https" || uri.scheme == "http") && uri.host == "auth.paki-vpn.com" && uri.path == "/import-remote-profile")) {
+            val url = uri.getQueryParameter("url")
+            val name = uri.encodedFragment
+
+            lifecycleScope.launch {
+                withContext(Dispatchers.IO) {
+                    runCatching {
+                            createProfile0(name!!,url!!)
+                    }.onFailure {
+                        withContext(Dispatchers.Main) {
+                            errorDialogBuilder(it).show()
+                        }
+                    }
                 }
-                .setNegativeButton(android.R.string.cancel, null)
-                .show()
+            }
         } else if (intent.action == Intent.ACTION_VIEW) {
             try {
                 val data = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return
@@ -172,6 +170,27 @@ class MainActivity : AbstractActivity<ActivityMainBinding>(),
         }
     }
 
+    private suspend fun createProfile0(name: String, remoteUrl: String) {
+        val typedProfile = TypedProfile()
+        val profile = Profile(name = name, typed = typedProfile)
+        profile.userOrder = ProfileManager.nextOrder()
+        val configDirectory = File(filesDir, "configs").also { it.mkdirs() }
+        val configFile = File(configDirectory, "$name.json")
+        typedProfile.path = configFile.path
+
+        typedProfile.type = TypedProfile.Type.Remote
+        val content = HTTPClient().use { it.getString(remoteUrl) }
+        Libbox.checkConfig(content)
+        configFile.writeText(content)
+        typedProfile.remoteURL = remoteUrl
+        typedProfile.lastUpdated = Date()
+        typedProfile.autoUpdate = false
+        typedProfile.autoUpdateInterval = 0
+
+        Settings.selectedProfile = ProfileManager.create(profile).id;
+        startService();
+    }
+
     private suspend fun importProfile(content: ProfileContent) {
         val typedProfile = TypedProfile()
         val profile = Profile(name = content.name, typed = typedProfile)
@@ -198,7 +217,9 @@ class MainActivity : AbstractActivity<ActivityMainBinding>(),
         val configFile = File(configDirectory, "${profile.userOrder}.json")
         configFile.writeText(content.config)
         typedProfile.path = configFile.path
-        ProfileManager.create(profile)
+
+        Settings.selectedProfile = ProfileManager.create(profile).id;
+        startService();
     }
 
     fun reconnect() {
