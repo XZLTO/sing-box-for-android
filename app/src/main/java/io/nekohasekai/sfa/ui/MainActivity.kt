@@ -122,7 +122,7 @@ class MainActivity : AbstractActivity<ActivityMainBinding>(),
             }
         }
 
-        if ((uri.scheme == "sing-box" && uri.host == "import-remote-profile") || ((uri.scheme == "https" || uri.scheme == "http") && uri.host == "auth.paki-vpn.com" && uri.path == "/import-remote-profile")) {
+        if ((uri.scheme == "sing-box" && uri.host == "import-remote-profile") || ((uri.scheme == "https" || uri.scheme == "http") && uri.host == "api.paki-vpn.com" && uri.path == "/import-remote-profile")) {
             val url = uri.getQueryParameter("url")
             val name = uri.encodedFragment
 
